@@ -6,20 +6,20 @@ This project demonstrates a complete frontend integration for Model Context Prot
 
 ## ✅ What's Working
 
-### 1. **Minimal Web API Server** (`minimal-web-api.js`)
+### 1. **Minimal Web API Server** (`src/examples/minimal-web-api.js`)
 - ✅ Express.js server with CORS enabled
 - ✅ Direct integration with Ollama (no MCP complexity for now)
 - ✅ RESTful API endpoints for frontend communication
 - ✅ Health monitoring and model selection
 
-### 2. **Frontend Chat Interface** (`frontend-example.html`)
+### 2. **Frontend Chat Interface** (`src/frontend/frontend-example.html`)
 - ✅ Modern, responsive web chat UI
 - ✅ Real-time status indicators
 - ✅ Model selection dropdown
 - ✅ Tools integration ready
 - ✅ Error handling and loading states
 
-### 3. **Frontend Server** (`frontend-server.js`)
+### 3. **Frontend Server** (`src/frontend/frontend-server.js`)
 - ✅ Simple Express server to serve the HTML interface
 - ✅ Static file serving with proper CORS headers
 
@@ -28,8 +28,8 @@ This project demonstrates a complete frontend integration for Model Context Prot
 ### Quick Start (Recommended)
 ```powershell
 # Start both servers
-node minimal-web-api.js    # Terminal 1 (API Server - Port 3002)
-node frontend-server.js    # Terminal 2 (Frontend - Port 3001)
+npm run minimal-web-api    # Terminal 1 (API Server - Port 3002)
+npm run frontend-server    # Terminal 2 (Frontend - Port 3001)
 
 # Open in browser
 http://localhost:3001
@@ -79,7 +79,7 @@ Frontend (Port 3001)          API Server (Port 3002)         Ollama (Port 11434)
         │                              │                              │
         │                              │                              │
     Served by                    Express.js                     gemma3:4b
-frontend-server.js            + CORS enabled                  deepseek-coder-v2
+src/frontend/frontend-server.js  + CORS enabled                  deepseek-coder-v2
                                                                 mistral:latest
                                                                 etc.
 ```
@@ -109,7 +109,7 @@ Invoke-RestMethod -Uri "http://localhost:3002/api/ollama/models" -Method GET
 
 ### Phase 1: Basic MCP Connection (Ready to implement)
 - [ ] Connect `OllamaMCPBridge` to the web API
-- [ ] Replace minimal API with full `web-api-server.js`
+- [ ] Replace minimal API with full `src/examples/web-api-server.js`
 - [ ] Enable real MCP tools in `/api/tools` endpoint
 
 ### Phase 2: Advanced Features
@@ -128,25 +128,31 @@ Invoke-RestMethod -Uri "http://localhost:3002/api/ollama/models" -Method GET
 
 ```
 i:\Work\testing\mcp\
-├── minimal-web-api.js      # ✅ Working API server (Ollama only)
-├── frontend-server.js      # ✅ Static file server
-├── frontend-example.html   # ✅ Chat interface
-├── web-api-server.js       # 🔄 Full MCP server (needs debugging)
-├── start-complete-demo.ps1 # ✅ Complete startup script
-├── config.json             # ✅ Configuration file
-├── build/                  # ✅ Compiled TypeScript
-│   ├── ollama-bridge.js    # 🔄 MCP bridge (ready for integration)
-│   └── config.js           # ✅ Configuration manager
-└── src/                    # ✅ TypeScript source
-    ├── ollama-bridge.ts    # 🔄 MCP bridge source
-    └── config.ts           # ✅ Configuration source
+├── src/
+│   ├── examples/
+│   │   ├── minimal-web-api.js      # ✅ Working API server (Ollama only)
+│   │   ├── real-mcp-web-api.js     # ✅ Full MCP server 
+│   │   └── web-api-server.js       # 🔄 Alternative MCP server
+│   ├── frontend/
+│   │   ├── frontend-server.js      # ✅ Static file server
+│   │   ├── frontend-example.html   # ✅ Chat interface
+│   │   └── frontend-mcp.html       # ✅ Enhanced chat interface
+│   └── utils/
+├── start-complete-demo.ps1         # ✅ Complete startup script
+├── config.json                     # ✅ Configuration file
+├── build/                          # ✅ Compiled TypeScript
+│   ├── ollama-bridge.js            # ✅ MCP bridge (working)
+│   └── config.js                   # ✅ Configuration manager
+└── src/                            # ✅ TypeScript source
+    ├── ollama-bridge.ts            # ✅ MCP bridge source
+    └── config.ts                   # ✅ Configuration source
 ```
 
 ## 🐛 Known Issues & Solutions
 
 ### Issue 1: Web API Server Hanging
-- **Problem**: `web-api-server.js` hangs on MCP connection
-- **Solution**: Use `minimal-web-api.js` for now (working)
+- **Problem**: `src/examples/web-api-server.js` hangs on MCP connection
+- **Solution**: Use `src/examples/minimal-web-api.js` for now (working)
 - **Future**: Debug MCP bridge connection issues
 
 ### Issue 2: CORS Errors
@@ -172,10 +178,10 @@ i:\Work\testing\mcp\
 
 ```powershell
 # Terminal 1: Start API
-node minimal-web-api.js
+npm run minimal-web-api
 
 # Terminal 2: Start Frontend
-node frontend-server.js
+npm run frontend-server
 
 # Browser: Open
 http://localhost:3001

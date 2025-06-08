@@ -47,19 +47,69 @@ npm run build
 npm run example-service
 
 # Terminal 2: Start the web API server
-node real-mcp-web-api.js
+npm run real-web-api
 
 # Terminal 3: Start the frontend
-npx http-server -p 3003
+npm run frontend-server
 ```
 
 4. **Open your browser:**
-Navigate to `http://localhost:3003/frontend-mcp.html` to use the interactive interface.
+Navigate to `http://localhost:3001` to use the interactive interface.
+
+## Project Structure
+
+The project is organized into a clean, modular structure:
+
+```
+src/
+├── examples/     # Demo services and web API servers
+│   ├── example-service.js     # Mock backend service
+│   ├── real-mcp-web-api.js   # Production MCP web API
+│   ├── web-api-server.js     # Full-featured web API
+│   ├── simple-web-api.js     # Simplified web API
+│   └── minimal-web-api.js    # Minimal web API example
+├── frontend/     # Frontend applications and interfaces
+│   ├── frontend-server.js    # Frontend application server
+│   ├── frontend-mcp.html     # MCP-specific interface
+│   └── frontend-example.html # Example interface
+├── tests/        # Test files for all components
+│   ├── test-integration.js   # Complete integration tests
+│   ├── test-server.js        # Core server tests
+│   └── test-*.js            # Component-specific tests
+├── utils/        # Utility scripts and development tools
+│   ├── interactive-chat.js   # Interactive chat utility
+│   └── debug-*.js           # Debug utilities
+├── config.ts     # Core TypeScript source files
+├── index.ts      # Main MCP server implementation
+├── ollama-bridge.ts # Ollama integration bridge
+└── setup.ts      # Setup and configuration
+```
+
+### Available npm Scripts
+
+```bash
+# Core operations
+npm run build                  # Build TypeScript
+npm run start                  # Start MCP server
+npm run dev                    # Build and start MCP server
+
+# Services
+npm run example-service        # Start mock backend service (port 3000)
+npm run real-web-api          # Start production web API (port 3002)
+npm run web-api               # Start full web API server
+npm run simple-web-api        # Start simple web API
+npm run minimal-web-api       # Start minimal web API
+npm run frontend-server       # Start frontend server (port 3001)
+
+# Testing and utilities
+npm run test-integration      # Run integration tests
+npm run chat                  # Interactive chat utility
+```
 
 ## Architecture
 
 ```
-Frontend (Port 3003)
+Frontend (Port 3001)
     ↓
 Web API Server (Port 3002)
     ↓
@@ -89,8 +139,8 @@ The system uses an intelligent tool selection mechanism:
 ### Service Ports
 
 - **3000**: Example/Custom service
-- **3002**: MCP Web API server  
-- **3003**: Frontend interface
+- **3001**: Frontend interface  
+- **3002**: MCP Web API server
 - **11434**: Ollama API (default)
 
 ### Claude Desktop Integration
@@ -145,7 +195,7 @@ if (message.includes('keyword')) {
 }
 ```
 
-3. **Add API endpoint in `real-mcp-web-api.js`:**
+3. **Add API endpoint in `src/examples/real-mcp-web-api.js`:**
 ```javascript
 app.post('/api/tools/my_new_tool', async (req, res) => {
   // Handle direct tool calls
@@ -167,8 +217,8 @@ The system uses two methods for tool selection:
 ### Testing
 
 ```bash
-# Run all tests
-npm test
+# Run integration tests
+npm run test-integration
 
 # Test specific tool
 curl -X POST http://localhost:3002/api/tools/calculator \
@@ -178,7 +228,11 @@ curl -X POST http://localhost:3002/api/tools/calculator \
 # Test smart chat
 curl -X POST http://localhost:3002/api/chat/smart \
   -H "Content-Type: application/json" \
-  -d '{"message": "What is 10 factorial?", "model": "llama3.2"}'
+  -d '{"message": "What is 10 factorial?", "model": "gemma3:4b"}'
+
+# Run individual tests
+node src/tests/test-integration.js
+node src/tests/test-server.js
 ```
 
 ## Usage Examples
@@ -457,8 +511,8 @@ The server includes comprehensive error handling for:
    - Review logs in web API console
 
 2. **Frontend not loading**:
-   - Ensure port 3003 is available
-   - Check that `frontend-mcp.html` exists
+   - Ensure port 3001 is available
+   - Check that frontend server is running: `npm run frontend-server`
    - Verify CORS settings in web API
 
 3. **Tools returning errors**:
@@ -476,7 +530,7 @@ The server includes comprehensive error handling for:
 Enable detailed logging:
 ```bash
 $env:DEBUG="mcp*"
-node real-mcp-web-api.js
+npm run real-web-api
 ```
 
 ### Testing Individual Components

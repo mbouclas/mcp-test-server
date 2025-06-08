@@ -9,7 +9,7 @@ This project implements an intelligent Model Context Protocol (MCP) server with 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Web API        │    │   Ollama        │
-│   (Port 3003)   │◄──►│   (Port 3002)    │◄──►│   (Port 11434)  │
+│   (Port 3001)   │◄──►│   (Port 3002)    │◄──►│   (Port 11434)  │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                               │
                               ▼
@@ -33,7 +33,7 @@ This project implements an intelligent Model Context Protocol (MCP) server with 
 
 ## Component Details
 
-### 1. Frontend Interface (`frontend-mcp.html`)
+### 1. Frontend Interface (`src/frontend/frontend-mcp.html`)
 
 **Purpose**: Interactive web interface for testing and demonstrating the system
 
@@ -48,7 +48,7 @@ This project implements an intelligent Model Context Protocol (MCP) server with 
 - Connects to Web API via fetch()
 - Responsive design with modern UI
 
-### 2. Web API Server (`real-mcp-web-api.js`)
+### 2. Web API Server (`src/examples/real-mcp-web-api.js`)
 
 **Purpose**: RESTful API layer that bridges frontend requests to the MCP system
 
@@ -196,7 +196,7 @@ if (message.match(/\b(url|link|validate|shorten|expand|qr)\b/i)) {
 |------|---------|---------|
 | 3000 | Example Service | Optional custom service for testing |
 | 3002 | Web API | Main REST API server |
-| 3003 | Frontend | Static file server for UI |
+| 3001 | Frontend | Static file server for UI |
 | 11434 | Ollama | Local LLM API (default) |
 
 ## Security Considerations
@@ -260,10 +260,10 @@ Frontend Error Display ← Web API Error Response ← Bridge Exception ← Tool 
 ### Development
 ```bash
 # Terminal 1: Start web API
-node real-mcp-web-api.js
+npm run real-web-api
 
 # Terminal 2: Start frontend
-npx http-server -p 3003
+npm run frontend-server
 ```
 
 ### Production (PM2)
@@ -272,7 +272,7 @@ npx http-server -p 3003
   "apps": [
     {
       "name": "mcp-web-api",
-      "script": "real-mcp-web-api.js",
+      "script": "src/examples/real-mcp-web-api.js",
       "instances": 2,
       "exec_mode": "cluster",
       "env": {
@@ -293,7 +293,7 @@ RUN npm ci --only=production
 COPY . .
 RUN npm run build
 EXPOSE 3002
-CMD ["node", "real-mcp-web-api.js"]
+CMD ["node", "src/examples/real-mcp-web-api.js"]
 ```
 
 ## Future Enhancements
@@ -316,7 +316,7 @@ CMD ["node", "real-mcp-web-api.js"]
 ### Adding New Tools
 1. Define tool in `src/index.ts`
 2. Update selection logic in `src/ollama-bridge.ts`
-3. Add API endpoint in `real-mcp-web-api.js`
+3. Add API endpoint in `src/examples/real-mcp-web-api.js`
 4. Update documentation
 
 ### Code Standards

@@ -36,10 +36,10 @@ The system features **intelligent tool selection** where Ollama automatically id
    npm run example-service
    
    # Terminal 2: Web API server with Ollama bridge
-   node real-mcp-web-api.js
+   npm run real-web-api
    
    # Terminal 3: Frontend interface
-   npx http-server -p 3003
+   npm run frontend-server
    ```
 
 ## Integration Methods
@@ -234,7 +234,7 @@ ollama pull codellama
 - **11434**: Ollama API (default)
 - **3000**: Example/Custom service
 - **3002**: MCP Web API server
-- **3003**: Frontend interface
+- **3001**: Frontend interface
 
 ## Testing the Integration
 
@@ -245,10 +245,10 @@ ollama pull codellama
 ollama serve
 
 # Terminal 2: Start the web API server
-node real-mcp-web-api.js
+npm run real-web-api
 
 # Terminal 3: Start frontend (optional)
-npx http-server -p 3003
+npm run frontend-server
 ```
 
 ### 2. Test Smart Chat
@@ -291,7 +291,7 @@ curl -X POST http://localhost:3002/api/tools/url_utilities `
 
 ### 4. Test Frontend Interface
 
-1. Open `http://localhost:3003/frontend-mcp.html`
+1. Open `http://localhost:3001/frontend-mcp.html`
 2. Try these example requests:
    - "Calculate 25 factorial"
    - "What's the weather in London?"
@@ -308,8 +308,8 @@ curl -X POST http://localhost:3002/api/tools/url_utilities `
    - Review logs in web API console
 
 2. **Frontend not loading**:
-   - Ensure port 3003 is available
-   - Check that `frontend-mcp.html` exists
+   - Ensure port 3001 is available
+   - Check that `frontend-mcp.html` exists in `src/frontend/`
    - Verify CORS settings in web API
 
 3. **Tools returning errors**:
@@ -327,7 +327,7 @@ curl -X POST http://localhost:3002/api/tools/url_utilities `
 Enable detailed logging:
 ```powershell
 $env:DEBUG="mcp*"
-node real-mcp-web-api.js
+npm run real-web-api
 ```
 
 ### Performance Tips
@@ -351,7 +351,7 @@ Example PM2 configuration:
 ```json
 {
   "name": "mcp-web-api",
-  "script": "real-mcp-web-api.js", 
+  "script": "src/examples/real-mcp-web-api.js", 
   "env": {
     "SERVICE_BASE_URL": "https://your-production-service.com",
     "OLLAMA_HOST": "http://localhost:11434"
