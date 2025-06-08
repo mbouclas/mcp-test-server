@@ -1,0 +1,41 @@
+{
+  "name": "mcp-custom-service-server",
+  "version": "1.0.0",
+  "description": "MCP Server that connects to custom services and integrates with Ollama",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "mcp-custom-service": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc && node build/index.js",
+    "setup": "tsc && node build/setup.js",
+    "example-service": "node example-service.js",
+    "test-integration": "node test-integration.js",
+    "chat": "node interactive-chat.js",
+    "web-api": "node web-api-server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "ollama",
+    "server",
+    "tools"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/node-fetch": "^2.6.12",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "node-fetch": "^2.7.0",
+    "zod": "^3.25.56"
+  }
+}

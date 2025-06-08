@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "custom-service-server": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "i:\\Work\\testing\\mcp\\build\\index.js"
+      ],
+      "env": {
+        "SERVICE_BASE_URL": "http://localhost:3000"
+      }
+    }
+  }
+}

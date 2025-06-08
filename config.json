@@ -1,0 +1,17 @@
+{
+    "ollama": {
+        "baseUrl": "http://127.0.0.1:11434",
+        "defaultModel": "gemma3:4b",
+        "chatEndpoint": "/api/chat",
+        "tagsEndpoint": "/api/tags"
+    },
+    "service": {
+        "baseUrl": "http://localhost:3000"
+    },
+    "mcp": {
+        "serverCommand": "node",
+        "serverArgs": [
+            "build/index.js"
+        ]
+    }
+}
