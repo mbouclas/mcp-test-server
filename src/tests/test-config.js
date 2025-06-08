@@ -1,4 +1,4 @@
-import { config } from './build/config.js';
+import { config } from '../../build/config.js';
 
 console.log('🔧 Configuration Test');
 console.log('====================');

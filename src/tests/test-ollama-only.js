@@ -4,7 +4,7 @@
  * Simple test to verify Ollama connectivity without MCP server dependency
  */
 
-import { OllamaMCPBridge } from './build/ollama-bridge.js';
+import { OllamaMCPBridge } from '../../build/ollama-bridge.js';
 
 async function testOllamaOnly() {
     console.log('🔧 Testing Ollama connectivity only...');

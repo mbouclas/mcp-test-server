@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { OllamaMCPBridge } from './build/ollama-bridge.js';
-import { config } from './build/config.js';
+import { OllamaMCPBridge } from '../../build/ollama-bridge.js';
+import { config } from '../../build/config.js';
 
 /**
  * Real MCP Web API server that connects to the actual MCP server

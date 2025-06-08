@@ -12,10 +12,14 @@
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
     "setup": "tsc && node build/setup.js",
-    "example-service": "node example-service.js",
-    "test-integration": "node test-integration.js",
-    "chat": "node interactive-chat.js",
-    "web-api": "node web-api-server.js",
+    "example-service": "node src/examples/example-service.js",
+    "test-integration": "node src/tests/test-integration.js",
+    "chat": "node src/utils/interactive-chat.js",
+    "web-api": "node src/examples/web-api-server.js",
+    "real-web-api": "node src/examples/real-mcp-web-api.js",
+    "simple-web-api": "node src/examples/simple-web-api.js",
+    "minimal-web-api": "node src/examples/minimal-web-api.js",
+    "frontend-server": "node src/frontend/frontend-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

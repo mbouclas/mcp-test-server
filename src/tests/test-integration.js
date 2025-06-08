@@ -1,5 +1,5 @@
-import { OllamaMCPBridge } from './build/ollama-bridge.js';
-import { config } from './build/config.js';
+import { OllamaMCPBridge } from '../../build/ollama-bridge.js';
+import { config } from '../../build/config.js';
 
 /**
  * Complete integration test that demonstrates MCP server + Ollama working together

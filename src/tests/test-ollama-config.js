@@ -1,4 +1,4 @@
-import { config } from './build/config.js';
+import { config } from '../../build/config.js';
 
 async function testOllamaWithConfig() {
     console.log('🔧 Testing Ollama with Configuration System');

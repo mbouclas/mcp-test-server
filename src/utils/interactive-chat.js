@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { OllamaMCPBridge } from './build/ollama-bridge.js';
+import { OllamaMCPBridge } from '../../build/ollama-bridge.js';
 import { createInterface } from 'readline';
 
 /**

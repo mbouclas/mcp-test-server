@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { OllamaMCPBridge } from './build/ollama-bridge.js';
+import { OllamaMCPBridge } from '../../build/ollama-bridge.js';
 
 async function testSingleQuery() {
     console.log('🔧 Testing single query: "Is my API running okay?"\n');
