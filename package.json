@@ -19,7 +19,7 @@
     "real-web-api": "node src/examples/real-mcp-web-api.js",
     "simple-web-api": "node src/examples/simple-web-api.js",
     "minimal-web-api": "node src/examples/minimal-web-api.js",
-    "frontend-server": "node src/frontend/frontend-server.js",
+    "frontend-server": "node src/frontend/frontend-mcp-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
