@@ -2,23 +2,37 @@
 
 ## Overview
 
-This project implements an intelligent Model Context Protocol (MCP) server with automatic tool selection capabilities, featuring seamless Ollama integration and a comprehensive suite of utilities.
+This project implements an intelligent Model Context Protocol (MCP) server with **agent-based automatic tool selection** capabilities, featuring specialized agents, seamless Ollama integration, and a comprehensive suite of utilities.
 
 ## Architecture Diagram
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Web API        │    │   Ollama        │
-│   (Port 3001)   │◄──►│   (Port 3002)    │◄──►│   (Port 11434)  │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌──────────────────┐
-                       │  Ollama Bridge   │
-                       │  Tool Selection  │
+│   Frontend      │    │ Agent-Enhanced   │    │   Ollama        │
+│   (Port 3001)   │◄──►│   Web API        │◄──►│   (Port 11434)  │
+└─────────────────┘    │   (Port 3002)    │    └─────────────────┘
                        └──────────────────┘
                               │
                               ▼
+                       ┌──────────────────┐
+                       │  Agent Manager   │
+                       │ (Smart Routing)  │
+                       └──────────────────┘
+                        ┌─────────┴─────────┐
+                        ▼                   ▼
+                ┌───────────────┐   ┌───────────────┐
+                │ Weather Agent │   │ General Agent │
+                │ (Specialized) │   │  (Fallback)   │
+                └───────────────┘   └───────────────┘
+                        │                   │
+                        ▼                   ▼
+                ┌───────────────┐   ┌───────────────┐
+                │ Ollama Bridge │   │ Ollama Bridge │
+                │ (Weather)     │   │ (General)     │
+                └───────────────┘   └───────────────┘
+                        │                   │
+                        └─────────┬─────────┘
+                                  ▼
                        ┌──────────────────┐
                        │   MCP Server     │
                        │   (stdio)        │
@@ -31,9 +45,99 @@ This project implements an intelligent Model Context Protocol (MCP) server with 
     └─────────────┴─────────────┴─────────────┴─────────────┘
 ```
 
+## Agent System Components
+
+### 1. Agent Manager (`src/agents/agent-manager.ts`)
+
+**Purpose**: Intelligent request routing and agent coordination
+
+**Key Features**:
+- Confidence-based agent selection
+- Keyword analysis for routing decisions
+- Conversation context management
+- Fallback to general processing
+
+**Routing Logic**:
+```typescript
+// Example routing decisions
+weather_keywords = ["weather", "temperature", "rain", "forecast"]
+math_keywords = ["calculate", "math", "equation", "solve"]
+// Routes to appropriate agent with confidence scoring
+```
+
+### 2. Base Agent (`src/agents/base-agent.ts`)
+
+**Purpose**: Abstract foundation for all specialized agents
+
+**Key Features**:
+- Conversation context management (20 message limit)
+- Tool execution permissions
+- Message history tracking
+- Standardized agent interface
+
+### 3. Weather Agent (`src/agents/weather-agent.ts`)
+
+**Purpose**: Specialized processing for weather-related requests
+
+**Key Features**:
+- Intelligent parameter extraction (location, units, time)
+- Weather-specific context and recommendations
+- Multi-tool coordination (weather_info + get_datetime)
+- Contextual follow-up suggestions
+
+**Example Enhancement**:
+```javascript
+// Basic weather response
+"Temperature: 22°C"
+
+// Agent-enhanced response
+"It's 22°C (72°F) in Tokyo - partly cloudy. Great weather for sightseeing! 
+You might want to bring a light jacket for evening."
+```
+
 ## Component Details
 
-### 1. Frontend Interface (`src/frontend/frontend-mcp.html`)
+### 1. Agent-Enhanced Web API Server (`src/examples/agent-enhanced-web-api.js`)
+
+**Purpose**: Enhanced web API with intelligent agent routing and specialized endpoints
+
+**Key Features**:
+- Agent-specific endpoints for direct communication
+- Intelligent request routing with confidence scoring
+- Conversation context management
+- Backward compatibility with original endpoints
+- Real-time agent status and health monitoring
+
+**New Endpoints**:
+```bash
+POST /api/chat/agent          # Intelligent agent routing
+POST /api/agents/:name/chat   # Direct agent communication
+GET  /api/agents              # List available agents
+GET  /api/agents/:name/history/:id  # Get conversation history
+DELETE /api/agents/:name/history/:id # Clear conversation history
+```
+
+**Enhanced Response Format**:
+```json
+{
+  "success": true,
+  "response": "Weather response with recommendations",
+  "agentUsed": "weather",
+  "toolsUsed": ["weather_info", "get_datetime"],
+  "routing": {
+    "agentName": "weather",
+    "confidence": 0.9,
+    "reason": "Message contains weather-related keywords"
+  },
+  "conversationId": "session-123",
+  "context": {
+    "messageCount": 3,
+    "lastActivity": "2025-06-10T..."
+  }
+}
+```
+
+### 2. Frontend Interface (`src/frontend/frontend-mcp.html`)
 
 **Purpose**: Interactive web interface for testing and demonstrating the system
 

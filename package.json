@@ -19,6 +19,7 @@
     "real-web-api": "node src/examples/real-mcp-web-api.js",
     "simple-web-api": "node src/examples/simple-web-api.js",
     "minimal-web-api": "node src/examples/minimal-web-api.js",
+    "agent-web-api": "tsc && node src/examples/agent-enhanced-web-api.js",
     "frontend-server": "node src/frontend/frontend-mcp-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -31,6 +32,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/node": "^22.15.30",
     "@types/node-fetch": "^2.6.12",
     "typescript": "^5.8.3"

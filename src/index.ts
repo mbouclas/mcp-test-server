@@ -434,6 +434,87 @@ server.tool(
   }
 );
 
+// Tool: URL utilities and operations
+server.tool(
+  "url_utilities",
+  "Perform URL operations like validation, shortening, QR code generation, and expansion",
+  {
+    operation: z.enum(["validate", "shorten", "expand", "qr_code", "analyze"]).describe("URL operation to perform"),
+    url: z.string().describe("URL to process"),
+    options: z.object({
+      format: z.enum(["json", "text"]).optional().describe("Response format"),
+      size: z.number().optional().describe("QR code size (for qr_code operation)")
+    }).optional().describe("Additional options for the operation")
+  },
+  async ({ operation, url, options }) => {
+    try {
+      let result = "";
+
+      switch (operation) {
+        case "validate":
+          try {
+            const urlObj = new URL(url);
+            const isValid = urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+            result = `URL Validation:\nURL: ${url}\nValid: ${isValid}\nProtocol: ${urlObj.protocol}\nHost: ${urlObj.host}\nPath: ${urlObj.pathname}`;
+          } catch (error) {
+            result = `URL Validation:\nURL: ${url}\nValid: false\nReason: Invalid URL format`;
+          }
+          break;
+
+        case "shorten":
+          // Mock URL shortening - replace with actual service
+          const shortCode = Math.random().toString(36).substring(2, 8);
+          result = `URL Shortening:\nOriginal: ${url}\nShortened: https://short.ly/${shortCode}\n(Note: This is a mock shortened URL)`;
+          break;
+
+        case "expand":
+          // Mock URL expansion - replace with actual service
+          if (url.includes('short.ly') || url.includes('bit.ly') || url.includes('tinyurl')) {
+            result = `URL Expansion:\nShort URL: ${url}\nExpanded: https://www.example.com/full-url\n(Note: This is a mock expansion)`;
+          } else {
+            result = `URL Expansion:\nURL: ${url}\nResult: This appears to be a full URL already`;
+          }
+          break;
+
+        case "qr_code":
+          const qrSize = options?.size || 200;
+          result = `QR Code Generation:\nURL: ${url}\nQR Code: [Generated QR code would be here]\nSize: ${qrSize}x${qrSize}px\nFormat: PNG\n(Note: In a real implementation, this would return actual QR code data)`;
+          break;
+
+        case "analyze":
+          try {
+            const urlObj = new URL(url);
+            result = `URL Analysis:\nURL: ${url}\nProtocol: ${urlObj.protocol}\nDomain: ${urlObj.hostname}\nPort: ${urlObj.port || 'default'}\nPath: ${urlObj.pathname}\nQuery Parameters: ${urlObj.search || 'none'}\nFragment: ${urlObj.hash || 'none'}\nIs HTTPS: ${urlObj.protocol === 'https:'}`;
+          } catch (error) {
+            result = `URL Analysis failed: Invalid URL format`;
+          }
+          break;
+
+        default:
+          throw new Error(`Unsupported operation: ${operation}`);
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: result,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `URL Utilities Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 // Main function to run the server
 async function main() {
   const transport = new StdioServerTransport();

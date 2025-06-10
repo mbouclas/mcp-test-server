@@ -1,21 +1,29 @@
-# Intelligent MCP Server with Tool Selection
+# Intelligent MCP Server with Agent-Based Tool Selection
 
-A Model Context Protocol (MCP) server that provides intelligent tool selection for language models, featuring seamless Ollama integration and a comprehensive suite of utilities.
+A Model Context Protocol (MCP) server that provides intelligent tool selection for language models, featuring specialized agents, seamless Ollama integration, and a comprehensive suite of utilities.
 
 ## Overview
 
-This MCP server features an **intelligent tool selection system** that automatically identifies and executes the most appropriate tools based on natural language requests. It includes:
+This MCP server features an **intelligent agent-based tool selection system** that automatically routes requests to specialized agents and executes the most appropriate tools based on natural language requests. It includes:
 
 ### Core Features
-- **🧠 Intelligent Tool Selection**: Automatically selects appropriate tools based on natural language input
-- **🔧 Modular Tool Architecture**: Easy to extend with new capabilities
-- **🌐 Web API Interface**: RESTful API for easy integration
+- **🤖 Intelligent Agent System**: Specialized agents for different domains (weather, math, general)
+- **🧠 Smart Request Routing**: Automatically routes requests to the best agent with confidence scoring
+- **🔧 Modular Tool Architecture**: Easy to extend with new capabilities and agents
+- **🌐 Enhanced Web API Interface**: RESTful API with agent-specific endpoints
 - **🦙 Native Ollama Integration**: Seamless connection with local Ollama models
 - **📱 Interactive Frontend**: User-friendly web interface for testing
+- **💬 Conversation Context**: Maintains conversation history and context across interactions
+
+### Agent System
+- **WeatherAgent**: Specialized for weather queries with contextual recommendations
+- **General Agent**: Fallback processing using the original MCP bridge
+- **AgentManager**: Intelligent routing system with confidence-based selection
+- **Conversation Tracking**: Maintains context and history for each agent interaction
 
 ### Available Tools
 - **Calculator**: Mathematical operations, factorial, Fibonacci, prime checking
-- **Weather Information**: Mock weather data with units and forecasting  
+- **Weather Information**: Real weather data with units and forecasting  
 - **URL Utilities**: URL validation, shortening, expansion, QR code generation
 - **Date/Time Operations**: Timezone-aware datetime formatting
 - **Service Health Monitoring**: Check service status and health
@@ -56,13 +64,124 @@ npm run frontend-server
 4. **Open your browser:**
 Navigate to `http://localhost:3001` to use the interactive interface.
 
+## Agent System 🤖
+
+The new **agent-based architecture** provides intelligent request routing and specialized processing:
+
+### Agent Types
+
+#### WeatherAgent 🌤️
+- **Specialization**: Weather queries, forecasts, and climate information
+- **Tools Used**: `weather_info`, `get_datetime`
+- **Features**:
+  - Intelligent parameter extraction (location, units, time)
+  - Contextual recommendations (clothing, activities)
+  - Multi-day forecast support
+  - Conversation continuity with weather context
+
+#### General Agent 🧠
+- **Specialization**: Fallback processing for non-specialized requests
+- **Tools Used**: All available MCP tools based on request analysis
+- **Features**:
+  - Uses original MCP bridge intelligence
+  - Handles math, general knowledge, and service queries
+  - Dynamic tool selection based on content
+
+### Agent Routing
+
+The **AgentManager** provides intelligent request routing:
+
+```javascript
+// Request analysis with confidence scoring
+{
+  "routing": {
+    "agentName": "weather",
+    "confidence": 0.9,
+    "reason": "Message contains weather-related keywords"
+  }
+}
+```
+
+**Routing Keywords:**
+- **Weather**: weather, temperature, rain, snow, forecast, climate
+- **Math**: calculate, math, equation, solve, compute
+- **Database**: query, database, search, find, data
+- **API**: api, service, endpoint, request
+
+### New API Endpoints
+
+#### Agent-Routed Chat
+```bash
+# Intelligent agent routing
+POST /api/chat/agent
+{
+  "message": "What's the weather in Tokyo?",
+  "conversationId": "optional-session-id",
+  "agent": "optional-explicit-agent"
+}
+```
+
+#### Direct Agent Communication
+```bash
+# Talk directly to weather agent
+POST /api/agents/weather/chat
+{
+  "message": "Will it rain tomorrow in London?",
+  "conversationId": "weather-session-123"
+}
+```
+
+#### Agent Management
+```bash
+# List available agents
+GET /api/agents
+
+# Get conversation history
+GET /api/agents/weather/history/session-id
+
+# Clear conversation history
+DELETE /api/agents/weather/history/session-id
+```
+
+### Agent Features
+
+- **Conversation Context**: Maintains up to 20 messages per conversation
+- **Tool Permissions**: Each agent has specific tool access rights
+- **Response Enhancement**: Agents provide contextual recommendations
+- **Fallback Processing**: Graceful degradation to general processing
+- **Backward Compatibility**: All original endpoints remain functional
+
+### Usage Examples
+
+```bash
+# Weather query with intelligent routing
+curl -X POST http://localhost:3002/api/chat/agent \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What'\''s the weather in Paris?"}'
+
+# Direct weather agent communication
+curl -X POST http://localhost:3002/api/agents/weather/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Should I bring an umbrella today?"}'
+
+# Mathematical calculation (routed to general agent)
+curl -X POST http://localhost:3002/api/chat/agent \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Calculate 45 * 67 + 123"}'
+```
+
 ## Project Structure
 
 The project is organized into a clean, modular structure:
 
 ```
 src/
+├── agents/       # 🆕 Agent system architecture
+│   ├── base-agent.ts         # Abstract base agent class
+│   ├── weather-agent.ts      # Specialized weather agent
+│   └── agent-manager.ts      # Agent routing and management
 ├── examples/     # Demo services and web API servers
+│   ├── agent-enhanced-web-api.js  # 🆕 Agent-enhanced web API
 │   ├── example-service.js     # Mock backend service
 │   ├── real-mcp-web-api.js   # Production MCP web API
 │   ├── web-api-server.js     # Full-featured web API
@@ -73,6 +192,7 @@ src/
 │   ├── frontend-mcp.html     # MCP-specific interface
 │   └── frontend-example.html # Example interface
 ├── tests/        # Test files for all components
+│   ├── test-agent-integration.js  # 🆕 Agent system tests
 │   ├── test-integration.js   # Complete integration tests
 │   ├── test-server.js        # Core server tests
 │   └── test-*.js            # Component-specific tests
@@ -95,6 +215,7 @@ npm run dev                    # Build and start MCP server
 
 # Services
 npm run example-service        # Start mock backend service (port 3000)
+npm run agent-web-api         # 🆕 Start agent-enhanced web API (port 3002)
 npm run real-web-api          # Start production web API (port 3002)
 npm run web-api               # Start full web API server
 npm run simple-web-api        # Start simple web API
@@ -111,23 +232,44 @@ npm run chat                  # Interactive chat utility
 ```
 Frontend (Port 3001)
     ↓
-Web API Server (Port 3002)
+Agent-Enhanced Web API Server (Port 3002)
     ↓
-Ollama Bridge
-    ↓
-MCP Server
+    ┌─────────────────────────────────────┐
+    │           Agent Manager             │
+    │      (Intelligent Routing)          │
+    └─────────────────────────────────────┘
+    ↓                          ↓
+┌──────────────┐      ┌──────────────┐
+│ WeatherAgent │      │ General Agent│
+│   (Weather)  │      │  (Fallback)  │
+└──────────────┘      └──────────────┘
+    ↓                          ↓
+Ollama Bridge  ←──────────→  Ollama Bridge
+    ↓                          ↓
+MCP Server     ←──────────→  MCP Server
     ↓
 Individual Tools (Calculator, Weather, URL Utils, etc.)
 ```
 
-### Smart Tool Selection
+### Smart Agent-Based Selection
 
-The system uses an intelligent tool selection mechanism:
+The system uses an intelligent agent-based tool selection mechanism:
 
-1. **LLM Analysis**: Ollama analyzes the user request to identify needed tools
-2. **Fallback Matching**: Keyword-based matching as backup
-3. **Tool Execution**: Selected tools are called with extracted parameters
-4. **Response Integration**: Tool results are integrated into the final response
+1. **Request Analysis**: AgentManager analyzes the user request for agent routing
+2. **Confidence Scoring**: Each potential agent gets a confidence score (0.0-1.0)
+3. **Agent Selection**: Highest confidence agent is selected, or fallback to general
+4. **Agent Processing**: Selected agent processes the request with specialized context
+5. **Tool Execution**: Agent calls appropriate tools with enhanced parameters
+6. **Contextual Response**: Agent provides domain-specific recommendations and follow-ups
+
+### Agent Workflow
+
+```
+User Request → AgentManager → Agent Selection → Tool Execution → Enhanced Response
+      ↓              ↓              ↓              ↓              ↓
+  "Weather in    Weather: 0.9    WeatherAgent   weather_info   "Partly cloudy,
+   Tokyo?"       General: 0.5    (selected)     + datetime     bring a jacket"
+```
 
 ## Configuration
 
@@ -555,6 +697,53 @@ curl http://localhost:3002/api/tools
 - Cache tool results for repeated queries
 - Monitor Ollama model performance with different sizes
 - Consider using lighter models (e.g., `llama3.2:1b`) for tool selection
+
+## Documentation
+
+### 📚 Additional Documentation
+
+- **[Agent System Guide](./AGENT_SYSTEM.md)** - Comprehensive guide to the agent architecture
+- **[Migration Guide](./MIGRATION.md)** - Upgrading from tool-based to agent-based system
+- **[Changelog](./CHANGELOG.md)** - Complete list of new features and changes
+- **[Architecture Overview](./ARCHITECTURE.md)** - System architecture and component details
+- **[Ollama Integration](./OLLAMA_INTEGRATION.md)** - Ollama setup and integration guide
+- **[Frontend Integration](./FRONTEND_INTEGRATION.md)** - Frontend development guide
+
+### 🚀 Quick Reference
+
+**Agent Endpoints:**
+```bash
+# Intelligent routing
+POST /api/chat/agent
+
+# Direct agent chat
+POST /api/agents/weather/chat
+
+# Agent management
+GET /api/agents
+```
+
+**Original Endpoints:**
+```bash
+# Smart chat with tools
+POST /api/chat/smart
+
+# Direct chat
+POST /api/chat
+
+# Tool discovery
+GET /api/tools
+```
+
+### 🔧 Development
+
+**Creating New Agents:**
+1. Extend `BaseAgent` class
+2. Define specialization and tools
+3. Register with `AgentManager`
+4. Add routing keywords
+
+**See [AGENT_SYSTEM.md](./AGENT_SYSTEM.md) for detailed development guide.**
 
 ## License
 
