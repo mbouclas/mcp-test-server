@@ -2,10 +2,15 @@ import { describe, test, expect, beforeEach, jest } from '@jest/globals';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 describe('MCP Server Core (Simplified)', () => {
-    let server: McpServer;
-
-    beforeEach(() => {
+    let server: McpServer; beforeEach(() => {
         jest.clearAllMocks();
+    });
+
+    afterEach(() => {
+        // Clear server reference to prevent memory leaks
+        if (server) {
+            server = null as any;
+        }
     });
 
     describe('Server Initialization', () => {

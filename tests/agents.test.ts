@@ -46,19 +46,25 @@ class TestAgent extends BaseAgent {
 }
 
 describe('Agent System', () => {
-    let mockBridge: jest.Mocked<OllamaMCPBridge>;
-
-    beforeEach(() => {
+    let mockBridge: jest.Mocked<OllamaMCPBridge>; beforeEach(() => {
         jest.clearAllMocks();
         mockBridge = new MockOllamaMCPBridge() as jest.Mocked<OllamaMCPBridge>;
 
         // Setup default mock implementations
-        mockBridge.callTool = jest.fn().mockResolvedValue('Mocked tool result');
-        mockBridge.chatWithOllama = jest.fn().mockResolvedValue('Mocked Ollama response');
-        mockBridge.getAvailableTools = jest.fn().mockResolvedValue([
+        mockBridge.callTool = jest.fn<(name: string, args: any) => Promise<string>>().mockResolvedValue('Mocked tool result');
+        mockBridge.chatWithOllama = jest.fn<(message: string, model?: string) => Promise<string>>().mockResolvedValue('Mocked Ollama response');
+        mockBridge.processWithTools = jest.fn<(userMessage: string, model?: string) => Promise<string>>().mockResolvedValue('Mocked processWithTools response');
+        mockBridge.getAvailableTools = jest.fn<() => Promise<any[]>>().mockResolvedValue([
             { name: 'weather_info', description: 'Get weather information' },
             { name: 'calculator', description: 'Perform calculations' }
         ]);
+    });
+
+    afterEach(() => {
+        // Clear any cached bridge references
+        if (mockBridge) {
+            mockBridge = null as any;
+        }
     });
 
     describe('BaseAgent', () => {
@@ -260,10 +266,9 @@ describe('Agent System', () => {
             expect(result.routing.agentName).toBe('weather');
             expect(result.routing.confidence).toBe(1.0);
             expect(result.routing.reason).toBe('Explicitly requested');
-        });
-
-        test('should fallback to general processing for unknown requests', async () => {
-            mockBridge.processWithTools = jest.fn().mockResolvedValue('General response');
+        }); test('should fallback to general processing for unknown requests', async () => {
+            (mockBridge.processWithTools as jest.MockedFunction<typeof mockBridge.processWithTools>)
+                .mockResolvedValue('General response');
 
             const result = await agentManager.routeMessage(
                 'Tell me a joke',
@@ -273,14 +278,13 @@ describe('Agent System', () => {
             expect(result.agentUsed).toBe('general');
             expect(result.routing.agentName).toBe('general');
             expect(mockBridge.processWithTools).toHaveBeenCalled();
-        });
-
-        test('should handle agent errors gracefully', async () => {
+        }); test('should handle agent errors gracefully', async () => {
             // Mock weather agent to throw an error
             jest.spyOn(agentManager['agents'].weather, 'processRequest')
                 .mockRejectedValue(new Error('Weather service unavailable'));
 
-            mockBridge.processWithTools = jest.fn().mockResolvedValue('Fallback response');
+            (mockBridge.processWithTools as jest.MockedFunction<typeof mockBridge.processWithTools>)
+                .mockResolvedValue('Fallback response');
 
             const result = await agentManager.routeMessage(
                 'Weather in Tokyo?',
@@ -315,12 +319,18 @@ describe('Agent System', () => {
 
             const nonExistentAgent = agentManager.getAgent('nonexistent');
             expect(nonExistentAgent).toBeUndefined();
-        });
-
-        test('should clear agent conversation history', () => {
-            agentManager.clearAgentHistory('weather', 'test-session');
-
+        }); test('should clear agent conversation history', () => {
+            // First add some conversation history
             const weatherAgent = agentManager.getAgent('weather');
+            weatherAgent?.['addMessage']('test-session', 'user', 'Test message');
+
+            // Verify history exists
+            expect(weatherAgent?.getConversationHistory('test-session')).toHaveLength(1);
+
+            // Clear the history
+            agentManager.clearAgentContext('weather', 'test-session');
+
+            // Verify history is cleared
             expect(weatherAgent?.getConversationHistory('test-session')).toHaveLength(0);
         });
 

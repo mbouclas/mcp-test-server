@@ -1,14 +1,56 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach, jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
-import { AgentEnhancedWebAPIServer } from '../src/examples/agent-enhanced-web-api.js';
 
-// Mock external dependencies
-jest.mock('../src/ollama-bridge.js');
-jest.mock('../src/agents/agent-manager.js');
+// Mock external dependencies before importing the main module
+jest.mock('../src/ollama-bridge.js', () => ({
+    OllamaMCPBridge: jest.fn().mockImplementation(() => ({
+        connect: jest.fn().mockResolvedValue(undefined),
+        disconnect: jest.fn().mockResolvedValue(undefined),
+        isConnected: jest.fn().mockReturnValue(true),
+        getAvailableTools: jest.fn().mockResolvedValue([
+            { name: 'calculator', description: 'Perform calculations' },
+            { name: 'weather_info', description: 'Get weather information' }
+        ]),
+        callTool: jest.fn().mockResolvedValue('Tool result'),
+        chatWithOllama: jest.fn().mockResolvedValue('Ollama response'),
+        processWithTools: jest.fn().mockResolvedValue('Smart response with tools')
+    }))
+}));
+
+jest.mock('../src/agents/agent-manager.js', () => ({
+    AgentManager: jest.fn().mockImplementation(() => ({
+        getAvailableAgents: jest.fn().mockReturnValue({
+            weather: { name: 'WeatherAgent', description: 'Weather specialist' },
+            general: { name: 'GeneralAgent', description: 'General purpose' }
+        }),
+        routeMessage: jest.fn().mockResolvedValue({
+            response: 'Agent response',
+            agentUsed: 'weather',
+            toolsUsed: ['weather_info'],
+            routing: { agentName: 'weather', confidence: 0.9, reason: 'Weather keywords detected' },
+            context: { conversationId: 'test-session', messages: [] }
+        }),
+        getAgent: jest.fn().mockReturnValue({
+            processRequest: jest.fn().mockResolvedValue({
+                response: 'Direct agent response',
+                toolsUsed: ['weather_info'],
+                context: { conversationId: 'test-session', messages: [] }
+            })
+        }),
+        clearAgentHistory: jest.fn().mockReturnValue(true),
+        getAgentHistory: jest.fn().mockReturnValue([])
+    }))
+}));
+
 jest.mock('node-fetch');
 
-const mockFetch = jest.mocked(fetch);
+// Now import the module after setting up mocks
+const { AgentEnhancedWebAPIServer } = await import('../src/examples/agent-enhanced-web-api.js');
+
+// Create a proper mock function for fetch
+const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+global.fetch = mockFetch;
 
 describe('Agent Enhanced Web API Integration', () => {
     let app: express.Application;
@@ -52,18 +94,56 @@ describe('Agent Enhanced Web API Integration', () => {
                     context: { conversationId: 'test-session', messages: [] }
                 })
             }),
-            clearAgentHistory: jest.fn(),
+            clearAgentHistory: jest.fn().mockReturnValue(true),
             getAgentHistory: jest.fn().mockReturnValue([])
-        };
-
-        apiServer['bridge'] = mockBridge as any;
+        }; apiServer['bridge'] = mockBridge as any;
         apiServer['agentManager'] = mockAgentManager as any;
         apiServer['isConnected'] = true;
+    }); afterAll(async () => {
+        // Clean up any resources associated with the API server
+        if (apiServer && apiServer['bridge'] && typeof apiServer['bridge'].disconnect === 'function') {
+            try {
+                await apiServer['bridge'].disconnect();
+            } catch (error) {
+                // Ignore errors during test cleanup
+            }
+        }
+
+        // If there's an actual HTTP server running (which shouldn't be the case in tests), close it
+        if (apiServer && apiServer['server']) {
+            await new Promise<void>((resolve) => {
+                apiServer['server'].close(() => {
+                    resolve();
+                });
+            });
+        }
+
+        // Force process cleanup to prevent worker hanging
+        const childProcesses = (process as any)._childProcesses;
+        if (childProcesses && Array.isArray(childProcesses)) {
+            childProcesses.forEach((child: any) => {
+                if (child && typeof child.kill === 'function' && !child.killed) {
+                    try {
+                        child.kill('SIGTERM');
+                        setTimeout(() => {
+                            if (!child.killed) {
+                                child.kill('SIGKILL');
+                            }
+                        }, 100);
+                    } catch (error) {
+                        // Ignore cleanup errors
+                    }
+                }
+            });
+        }
+
+        // Additional delay for process cleanup
+        await new Promise(resolve => setTimeout(resolve, 150));
     });
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockFetch.mockReset();
+        mockFetch.mockClear();
     });
 
     describe('Health Check Endpoint', () => {
@@ -82,11 +162,10 @@ describe('Agent Enhanced Web API Integration', () => {
             expect(response.body.agents).toBeDefined();
             expect(response.body.endpoints).toBeInstanceOf(Array);
             expect(response.body.timestamp).toBeDefined();
-        });
-
-        test('should handle MCP connection errors gracefully', async () => {
-            // Temporarily break the connection
-            apiServer['isConnected'] = false;
+        }); test('should handle MCP connection errors gracefully', async () => {
+            // Mock the bridge connection status
+            const originalEnsureConnected = apiServer['ensureConnected'];
+            apiServer['ensureConnected'] = jest.fn().mockRejectedValue(new Error('Connection failed'));
 
             const response = await request(app)
                 .get('/api/health')
@@ -95,7 +174,7 @@ describe('Agent Enhanced Web API Integration', () => {
             expect(response.body.mcpConnected).toBe(false);
 
             // Restore connection
-            apiServer['isConnected'] = true;
+            apiServer['ensureConnected'] = originalEnsureConnected;
         });
     });
 
@@ -150,20 +229,20 @@ describe('Agent Enhanced Web API Integration', () => {
         test('POST /api/tools/:toolName should execute specific tools', async () => {
             const response = await request(app)
                 .post('/api/tools/calculator')
-                .send({ operation: 'add', a: 5, b: 3 })
+                .send({ expression: '5 + 3' })
                 .expect(200);
 
             expect(response.body).toMatchObject({
                 success: true,
                 result: 'Tool result',
                 toolName: 'calculator',
-                args: { operation: 'add', a: 5, b: 3 },
+                args: { expression: '5 + 3' },
                 mcpConnected: true
             });
 
             expect(apiServer['bridge'].callTool).toHaveBeenCalledWith(
                 'calculator',
-                { operation: 'add', a: 5, b: 3 }
+                { expression: '5 + 3' }
             );
         });
 
@@ -311,12 +390,10 @@ describe('Agent Enhanced Web API Integration', () => {
 
             expect(response.body.success).toBe(false);
             expect(response.body.error).toContain("Agent 'nonexistent' not found");
-        });
-
-        test('GET /api/agents/:agentName/history/:conversationId should return conversation history', async () => {
+        }); test('GET /api/agents/:agentName/history/:conversationId should return conversation history', async () => {
             const mockHistory = [
-                { role: 'user', content: 'Previous question', timestamp: new Date() },
-                { role: 'assistant', content: 'Previous answer', timestamp: new Date() }
+                { role: 'user', content: 'Previous question', timestamp: '2025-06-12T15:55:16.520Z' },
+                { role: 'assistant', content: 'Previous answer', timestamp: '2025-06-12T15:55:16.520Z' }
             ];
 
             (apiServer['agentManager'].getAgentHistory as jest.Mock).mockReturnValueOnce(mockHistory);
@@ -387,7 +464,7 @@ describe('Agent Enhanced Web API Integration', () => {
                 .expect(500);
 
             expect(response.body.success).toBe(false);
-            expect(response.body.error).toContain('Failed to fetch models');
+            expect(response.body.error).toContain('Failed to fetch Ollama models');
         });
     });
 

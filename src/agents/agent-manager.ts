@@ -69,7 +69,7 @@ export class AgentManager {
             };
         } else {
             // Route based on message content
-            routing = await this.analyzeAndRoute(message);
+            routing = await this.analyzeAndRoute(message, conversationId);
             selectedAgent = routing.agentName;
         }
 
@@ -104,13 +104,23 @@ export class AgentManager {
                 reason: `Fallback due to ${selectedAgent} agent error: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
         }
-    }
-
-    /**
+    }    /**
      * Analyze message content and route to appropriate agent
      */
-    private async analyzeAndRoute(message: string): Promise<RouteResult> {
+    private async analyzeAndRoute(message: string, conversationId?: string): Promise<RouteResult> {
         const lowerMessage = message.toLowerCase();
+
+        // Context-aware routing: check if this conversation has recent history with a specific agent
+        if (conversationId) {
+            const contextualAgent = this.getContextualAgent(conversationId);
+            if (contextualAgent && this.isFollowUpMessage(message)) {
+                return {
+                    agentName: contextualAgent,
+                    confidence: 0.8,
+                    reason: 'Contextual follow-up to previous conversation'
+                };
+            }
+        }
 
         // Weather-related routing
         const weatherKeywords = [
@@ -302,6 +312,13 @@ export class AgentManager {
     }
 
     /**
+     * Clear conversation history for a specific agent (alias for clearAgentContext)
+     */
+    clearAgentHistory(agentName: string, conversationId?: string): boolean {
+        return this.clearAgentContext(agentName, conversationId);
+    }
+
+    /**
      * Get conversation history from a specific agent
      */
     getAgentHistory(agentName: string, conversationId?: string): any[] {
@@ -348,5 +365,40 @@ export class AgentManager {
         }
 
         return results;
+    }
+
+    /**
+     * Get the agent that was most recently used in a conversation
+     */
+    private getContextualAgent(conversationId: string): string | null {
+        // Check each agent to see if they have recent history for this conversation
+        for (const [agentName, agent] of Object.entries(this.agents)) {
+            const history = agent.getConversationHistory(conversationId);
+            if (history.length > 0) {
+                // Return the agent with the most recent activity
+                return agentName;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check if a message appears to be a follow-up to a previous conversation
+     */
+    private isFollowUpMessage(message: string): boolean {
+        const lowerMessage = message.toLowerCase();
+
+        // Common follow-up patterns
+        const followUpPatterns = [
+            'what about', 'how about', 'and tomorrow', 'next day', 'later',
+            'also', 'additionally', 'furthermore', 'what if', 'suppose',
+            'then', 'after that', 'following', 'continue', 'more about'
+        ];
+
+        return followUpPatterns.some(pattern => lowerMessage.includes(pattern)) ||
+            // Questions that start with typical follow-up words
+            /^(what|how|when|where|why|can|could|would|will|should)\s+(?:about|if)/i.test(message) ||
+            // Short questions that likely need context
+            (message.length < 30 && message.includes('?'));
     }
 }

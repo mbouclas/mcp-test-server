@@ -7,7 +7,7 @@ global.fetch = mockFetch;
 describe('MCP Tools', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockFetch.mockReset();
+        mockFetch.mockClear();
     });
 
     describe('Calculator Tool', () => {

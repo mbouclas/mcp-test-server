@@ -26,12 +26,22 @@ const mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 global.fetch = mockFetch;
 
 describe('MCP Server Core', () => {
-    let server: McpServer;
-
-    beforeEach(() => {
+    let server: McpServer; beforeEach(() => {
         jest.clearAllMocks();
         // Reset fetch mock
-        mockFetch.mockReset();
+        mockFetch.mockClear();
+    });
+
+    afterEach(async () => {
+        // Clean up server resources if needed
+        if (server) {
+            try {
+                // MCP server doesn't have explicit cleanup, but we clear the reference
+                server = null as any;
+            } catch (error) {
+                // Ignore cleanup errors
+            }
+        }
     }); describe('Server Initialization', () => {
         test('should initialize server with correct configuration', () => {
             const serverConfig = {

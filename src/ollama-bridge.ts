@@ -1,6 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { config } from './config.js';
+import { ChildProcess } from 'child_process';
 // Using built-in fetch (Node.js 18+)
 
 /**
@@ -10,7 +11,11 @@ import { config } from './config.js';
 
 class OllamaMCPBridge {
   private mcpClient: Client;
+  private transport: StdioClientTransport | undefined;
+  private childProcess: ChildProcess | undefined;
   private isConnected = false;
+  private connectionTimeout = 5000; // 5 second timeout for connections
+  private requestTimeout = 10000; // 10 second timeout for requests
 
   constructor() {
     this.mcpClient = new Client(
@@ -18,13 +23,23 @@ class OllamaMCPBridge {
       { capabilities: {} }
     );
   }
+
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`${operation} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
+    return Promise.race([promise, timeoutPromise]);
+  }
   async connect(): Promise<void> {
     if (this.isConnected) return;
 
     const mcpConfig = config.getMcpConfig();
     const serviceConfig = config.getServiceConfig();
 
-    const transport = new StdioClientTransport({
+    this.transport = new StdioClientTransport({
       command: mcpConfig.serverCommand,
       args: mcpConfig.serverArgs,
       env: {
@@ -32,33 +47,76 @@ class OllamaMCPBridge {
       }
     });
 
-    await this.mcpClient.connect(transport);
-    this.isConnected = true;
-    console.log('Connected to MCP server');
+    // Access the child process if available (this is internal to StdioClientTransport)
+    // We'll need to track it for proper cleanup
+    if (this.transport && (this.transport as any).process) {
+      this.childProcess = (this.transport as any).process;
+    } try {
+      await this.withTimeout(
+        this.mcpClient.connect(this.transport),
+        this.connectionTimeout,
+        'MCP connection'
+      );
+      this.isConnected = true;
+
+      // Try to get the child process after connection is established
+      this.tryGetChildProcessFromTransport();
+
+      console.log('Connected to MCP server');
+    } catch (error) {
+      this.isConnected = false;
+      this.transport = undefined;
+      this.childProcess = undefined;
+      throw new Error(`Failed to connect to MCP server: ${error}`);
+    }
+  }
+  private async ensureConnected(): Promise<void> {
+    if (!this.isConnected) {
+      await this.connect();
+    } else if (!this.childProcess && this.transport) {
+      // Try to get child process if we're connected but don't have it yet
+      this.tryGetChildProcessFromTransport();
+    }
   }
 
   async getAvailableTools(): Promise<any[]> {
-    if (!this.isConnected) await this.connect();
+    await this.ensureConnected();
 
-    const tools = await this.mcpClient.listTools();
-    return tools.tools || [];
+    try {
+      const tools = await this.withTimeout(
+        this.mcpClient.listTools(),
+        this.requestTimeout,
+        'List tools'
+      );
+      return tools.tools || [];
+    } catch (error) {
+      console.error('Error getting available tools:', error);
+      return [];
+    }
   }
 
   async callTool(name: string, args: any): Promise<string> {
-    if (!this.isConnected) await this.connect();
+    await this.ensureConnected();
 
     try {
-      const result = await this.mcpClient.callTool({
-        name,
-        arguments: args
-      });
+      const result = await this.withTimeout(
+        this.mcpClient.callTool({
+          name,
+          arguments: args
+        }),
+        this.requestTimeout,
+        `Tool execution: ${name}`
+      );
+
       return (result.content as any[])
-        .map((content: any) => content.type === 'text' ? content.text : '')
+        .filter((content: any) => content.type === 'text')
+        .map((content: any) => content.text)
         .join('\n');
     } catch (error) {
-      return `Error calling tool ${name}: ${error}`;
+      throw new Error(`Failed to execute tool ${name}: ${error}`);
     }
   }
+
   async chatWithOllama(message: string, model?: string): Promise<string> {
     const ollamaConfig = config.getOllamaConfig();
     const selectedModel = model || ollamaConfig.defaultModel;
@@ -66,6 +124,9 @@ class OllamaMCPBridge {
 
     try {
       console.log(`Calling Ollama at ${ollamaUrl} with model: ${selectedModel}`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
 
       const response = await fetch(ollamaUrl, {
         method: 'POST',
@@ -88,25 +149,61 @@ When the user asks for something that requires these tools, use them and provide
             }
           ],
           stream: false
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       console.log(`Ollama response status: ${response.status}`);
 
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(`Ollama responded with status ${response.status}: ${text}`);
+        throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
       console.log('Ollama response data:', data);
       return data.message?.content || 'No response from Ollama';
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Ollama request timed out');
+      }
       console.error('Error communicating with Ollama:', error);
-      console.error('Error stack:', error.stack);
-      return `Error communicating with Ollama: ${error?.message || error}`;
+      throw new Error(`Failed to communicate with Ollama: ${error?.message || error}`);
     }
-  }  /**
+  }
+
+  async getAvailableModels(): Promise<any[]> {
+    const ollamaConfig = config.getOllamaConfig();
+    const tagsUrl = `${ollamaConfig.baseUrl}${ollamaConfig.tagsEndpoint}`;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
+
+      const response = await fetch(tagsUrl, {
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to get models: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.models || [];
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Models request timed out');
+      }
+      console.error('Error getting available models:', error);
+      return [];
+    }
+  }
+
+  /**
    * Analyze user message and determine which tools to use using LLM
    */
   private async analyzeToolNeeds(userMessage: string, tools: any[]): Promise<any> {
@@ -319,12 +416,88 @@ Rules:
       return await this.chatWithOllama(userMessage, model);
     }
   }
-
   async disconnect(): Promise<void> {
-    if (this.isConnected) {
-      await this.mcpClient.close();
-      this.isConnected = false;
-      console.log('Disconnected from MCP server');
+    if (this.isConnected && this.mcpClient) {
+      try {
+        await this.withTimeout(
+          this.mcpClient.close(),
+          this.connectionTimeout,
+          'MCP disconnect'
+        );
+        this.isConnected = false;
+        console.log('Disconnected from MCP server');
+      } catch (error) {
+        console.warn('Error during disconnect:', error);
+        this.isConnected = false;
+      }
+    }
+
+    // Force terminate child process if it exists and hasn't been cleaned up
+    if (this.childProcess && !this.childProcess.killed) {
+      try {
+        console.log('Force terminating MCP server child process');
+
+        // Try graceful termination first
+        this.childProcess.kill('SIGTERM');
+
+        // Wait a bit for graceful shutdown
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Force kill if still running
+        if (!this.childProcess.killed) {
+          this.childProcess.kill('SIGKILL');
+        }
+      } catch (error) {
+        console.warn('Error terminating child process:', error);
+      }
+    }
+
+    // Try to access and terminate process through transport if available
+    if (this.transport && (this.transport as any).process) {
+      const transportProcess = (this.transport as any).process;
+      if (transportProcess && !transportProcess.killed) {
+        try {
+          console.log('Force terminating MCP transport process');
+          transportProcess.kill('SIGTERM');
+
+          setTimeout(() => {
+            if (!transportProcess.killed) {
+              transportProcess.kill('SIGKILL');
+            }
+          }, 100);
+        } catch (error) {
+          console.warn('Error terminating transport process:', error);
+        }
+      }
+    }
+
+    // Clear references
+    this.transport = undefined;
+    this.childProcess = undefined;
+  }
+
+  // Getter for connection status (used in tests)
+  get client(): Client | undefined {
+    return this.isConnected ? this.mcpClient : undefined;
+  }
+
+  private tryGetChildProcessFromTransport(): void {
+    // Try to access the child process from the transport
+    // This is needed because StdioClientTransport might create the process asynchronously
+    if (this.transport && !this.childProcess) {
+      try {
+        // Try different possible property names that the transport might use
+        const transportAny = this.transport as any;
+        if (transportAny.process) {
+          this.childProcess = transportAny.process;
+        } else if (transportAny._process) {
+          this.childProcess = transportAny._process;
+        } else if (transportAny.childProcess) {
+          this.childProcess = transportAny.childProcess;
+        }
+      } catch (error) {
+        // Ignore errors when trying to access internal properties
+      }
     }
   }
 }

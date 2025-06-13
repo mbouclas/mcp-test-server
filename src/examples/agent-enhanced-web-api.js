@@ -324,18 +324,16 @@ class AgentEnhancedWebAPIServer {
                     error: error instanceof Error ? error.message : 'Unknown error'
                 });
             }
-        });
-
-        // Clear conversation history for an agent
+        });        // Clear conversation history for an agent
         this.app.delete('/api/agents/:agentName/history/:conversationId?', (req, res) => {
             try {
                 const { agentName, conversationId } = req.params;
 
-                const cleared = this.agentManager.clearAgentContext(agentName, conversationId);
+                const cleared = this.agentManager.clearAgentHistory(agentName, conversationId);
 
                 res.json({
                     success: cleared,
-                    message: cleared ? 'History cleared successfully' : 'Agent not found',
+                    message: cleared ? 'Conversation history cleared' : 'Agent not found',
                     agentName,
                     conversationId: conversationId || 'default'
                 });
@@ -355,12 +353,12 @@ class AgentEnhancedWebAPIServer {
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch Ollama models');
-                }
-
-                const data = await response.json();
+                } const data = await response.json();
+                const models = data.models || [];
                 res.json({
                     success: true,
-                    models: data.models || [],
+                    models: models,
+                    count: models.length,
                     defaultModel: ollamaConfig.defaultModel
                 });
             } catch (error) {

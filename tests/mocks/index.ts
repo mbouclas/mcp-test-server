@@ -3,19 +3,30 @@
 // Mock OllamaMCPBridge
 export class MockOllamaMCPBridge {
     private connected = false;
+    private transport: any = null;
+    private childProcess: any = null;
 
     async connect() {
         this.connected = true;
+        // Mock transport and child process without actually creating them
+        this.transport = { mock: true };
+        this.childProcess = { mock: true, killed: true };
         return Promise.resolve();
     }
 
     async disconnect() {
         this.connected = false;
+        this.transport = null;
+        this.childProcess = null;
         return Promise.resolve();
     }
 
     isConnected() {
         return this.connected;
+    }
+
+    get client() {
+        return this.connected ? { mock: true } : undefined;
     }
 
     async getAvailableTools() {

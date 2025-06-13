@@ -67,10 +67,8 @@ class MCPSetup {
   }
 
   async testMCPServer() {
-    console.log('Testing MCP server...');
-
-    try {
-      const { OllamaMCPBridge } = await import('../build/ollama-bridge.js');
+    console.log('Testing MCP server...'); try {
+      const { OllamaMCPBridge } = await import('./ollama-bridge.js');
       const bridge = new OllamaMCPBridge();
 
       await bridge.connect();
